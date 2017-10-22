@@ -96,6 +96,12 @@ pub const HB_VERSION_MAJOR: ::std::os::raw::c_uint = 1;
 pub const HB_VERSION_MINOR: ::std::os::raw::c_uint = 6;
 pub const HB_VERSION_MICRO: ::std::os::raw::c_uint = 0;
 pub const HB_VERSION_STRING: &'static [u8; 6usize] = b"1.6.0\x00";
+pub const HB_OT_LAYOUT_NO_SCRIPT_INDEX: ::std::os::raw::c_uint = 65535;
+pub const HB_OT_LAYOUT_NO_FEATURE_INDEX: ::std::os::raw::c_uint = 65535;
+pub const HB_OT_LAYOUT_DEFAULT_LANGUAGE_INDEX: ::std::os::raw::c_uint = 65535;
+pub const HB_OT_LAYOUT_NO_VARIATIONS_INDEX: ::std::os::raw::c_uint =
+    4294967295;
+pub const HB_OT_VAR_NO_AXIS_INDEX: ::std::os::raw::c_uint = 4294967295;
 pub type int_least8_t = i8;
 pub type int_least16_t = i16;
 pub type int_least32_t = i32;
@@ -3015,6 +3021,612 @@ extern "C" {
     pub fn hb_version_atleast(major: ::std::os::raw::c_uint,
                               minor: ::std::os::raw::c_uint,
                               micro: ::std::os::raw::c_uint) -> hb_bool_t;
+}
+extern "C" {
+    pub fn hb_ot_font_set_funcs(font: *mut hb_font_t);
+}
+extern "C" {
+    pub fn hb_ot_tags_from_script(script: hb_script_t,
+                                  script_tag_1: *mut hb_tag_t,
+                                  script_tag_2: *mut hb_tag_t);
+}
+extern "C" {
+    pub fn hb_ot_tag_to_script(tag: hb_tag_t) -> hb_script_t;
+}
+extern "C" {
+    pub fn hb_ot_tag_from_language(language: hb_language_t) -> hb_tag_t;
+}
+extern "C" {
+    pub fn hb_ot_tag_to_language(tag: hb_tag_t) -> hb_language_t;
+}
+extern "C" {
+    pub fn hb_ot_layout_has_glyph_classes(face: *mut hb_face_t) -> hb_bool_t;
+}
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum hb_ot_layout_glyph_class_t {
+    HB_OT_LAYOUT_GLYPH_CLASS_UNCLASSIFIED = 0,
+    HB_OT_LAYOUT_GLYPH_CLASS_BASE_GLYPH = 1,
+    HB_OT_LAYOUT_GLYPH_CLASS_LIGATURE = 2,
+    HB_OT_LAYOUT_GLYPH_CLASS_MARK = 3,
+    HB_OT_LAYOUT_GLYPH_CLASS_COMPONENT = 4,
+}
+extern "C" {
+    pub fn hb_ot_layout_get_glyph_class(face: *mut hb_face_t,
+                                        glyph: hb_codepoint_t)
+     -> hb_ot_layout_glyph_class_t;
+}
+extern "C" {
+    pub fn hb_ot_layout_get_glyphs_in_class(face: *mut hb_face_t,
+                                            klass: hb_ot_layout_glyph_class_t,
+                                            glyphs: *mut hb_set_t);
+}
+extern "C" {
+    pub fn hb_ot_layout_get_attach_points(face: *mut hb_face_t,
+                                          glyph: hb_codepoint_t,
+                                          start_offset:
+                                              ::std::os::raw::c_uint,
+                                          point_count:
+                                              *mut ::std::os::raw::c_uint,
+                                          point_array:
+                                              *mut ::std::os::raw::c_uint)
+     -> ::std::os::raw::c_uint;
+}
+extern "C" {
+    pub fn hb_ot_layout_get_ligature_carets(font: *mut hb_font_t,
+                                            direction: hb_direction_t,
+                                            glyph: hb_codepoint_t,
+                                            start_offset:
+                                                ::std::os::raw::c_uint,
+                                            caret_count:
+                                                *mut ::std::os::raw::c_uint,
+                                            caret_array: *mut hb_position_t)
+     -> ::std::os::raw::c_uint;
+}
+extern "C" {
+    pub fn hb_ot_layout_table_get_script_tags(face: *mut hb_face_t,
+                                              table_tag: hb_tag_t,
+                                              start_offset:
+                                                  ::std::os::raw::c_uint,
+                                              script_count:
+                                                  *mut ::std::os::raw::c_uint,
+                                              script_tags: *mut hb_tag_t)
+     -> ::std::os::raw::c_uint;
+}
+extern "C" {
+    pub fn hb_ot_layout_table_find_script(face: *mut hb_face_t,
+                                          table_tag: hb_tag_t,
+                                          script_tag: hb_tag_t,
+                                          script_index:
+                                              *mut ::std::os::raw::c_uint)
+     -> hb_bool_t;
+}
+extern "C" {
+    pub fn hb_ot_layout_table_choose_script(face: *mut hb_face_t,
+                                            table_tag: hb_tag_t,
+                                            script_tags: *const hb_tag_t,
+                                            script_index:
+                                                *mut ::std::os::raw::c_uint,
+                                            chosen_script: *mut hb_tag_t)
+     -> hb_bool_t;
+}
+extern "C" {
+    pub fn hb_ot_layout_table_get_feature_tags(face: *mut hb_face_t,
+                                               table_tag: hb_tag_t,
+                                               start_offset:
+                                                   ::std::os::raw::c_uint,
+                                               feature_count:
+                                                   *mut ::std::os::raw::c_uint,
+                                               feature_tags: *mut hb_tag_t)
+     -> ::std::os::raw::c_uint;
+}
+extern "C" {
+    pub fn hb_ot_layout_script_get_language_tags(face: *mut hb_face_t,
+                                                 table_tag: hb_tag_t,
+                                                 script_index:
+                                                     ::std::os::raw::c_uint,
+                                                 start_offset:
+                                                     ::std::os::raw::c_uint,
+                                                 language_count:
+                                                     *mut ::std::os::raw::c_uint,
+                                                 language_tags: *mut hb_tag_t)
+     -> ::std::os::raw::c_uint;
+}
+extern "C" {
+    pub fn hb_ot_layout_script_find_language(face: *mut hb_face_t,
+                                             table_tag: hb_tag_t,
+                                             script_index:
+                                                 ::std::os::raw::c_uint,
+                                             language_tag: hb_tag_t,
+                                             language_index:
+                                                 *mut ::std::os::raw::c_uint)
+     -> hb_bool_t;
+}
+extern "C" {
+    pub fn hb_ot_layout_language_get_required_feature_index(face:
+                                                                *mut hb_face_t,
+                                                            table_tag:
+                                                                hb_tag_t,
+                                                            script_index:
+                                                                ::std::os::raw::c_uint,
+                                                            language_index:
+                                                                ::std::os::raw::c_uint,
+                                                            feature_index:
+                                                                *mut ::std::os::raw::c_uint)
+     -> hb_bool_t;
+}
+extern "C" {
+    pub fn hb_ot_layout_language_get_required_feature(face: *mut hb_face_t,
+                                                      table_tag: hb_tag_t,
+                                                      script_index:
+                                                          ::std::os::raw::c_uint,
+                                                      language_index:
+                                                          ::std::os::raw::c_uint,
+                                                      feature_index:
+                                                          *mut ::std::os::raw::c_uint,
+                                                      feature_tag:
+                                                          *mut hb_tag_t)
+     -> hb_bool_t;
+}
+extern "C" {
+    pub fn hb_ot_layout_language_get_feature_indexes(face: *mut hb_face_t,
+                                                     table_tag: hb_tag_t,
+                                                     script_index:
+                                                         ::std::os::raw::c_uint,
+                                                     language_index:
+                                                         ::std::os::raw::c_uint,
+                                                     start_offset:
+                                                         ::std::os::raw::c_uint,
+                                                     feature_count:
+                                                         *mut ::std::os::raw::c_uint,
+                                                     feature_indexes:
+                                                         *mut ::std::os::raw::c_uint)
+     -> ::std::os::raw::c_uint;
+}
+extern "C" {
+    pub fn hb_ot_layout_language_get_feature_tags(face: *mut hb_face_t,
+                                                  table_tag: hb_tag_t,
+                                                  script_index:
+                                                      ::std::os::raw::c_uint,
+                                                  language_index:
+                                                      ::std::os::raw::c_uint,
+                                                  start_offset:
+                                                      ::std::os::raw::c_uint,
+                                                  feature_count:
+                                                      *mut ::std::os::raw::c_uint,
+                                                  feature_tags: *mut hb_tag_t)
+     -> ::std::os::raw::c_uint;
+}
+extern "C" {
+    pub fn hb_ot_layout_language_find_feature(face: *mut hb_face_t,
+                                              table_tag: hb_tag_t,
+                                              script_index:
+                                                  ::std::os::raw::c_uint,
+                                              language_index:
+                                                  ::std::os::raw::c_uint,
+                                              feature_tag: hb_tag_t,
+                                              feature_index:
+                                                  *mut ::std::os::raw::c_uint)
+     -> hb_bool_t;
+}
+extern "C" {
+    pub fn hb_ot_layout_feature_get_lookups(face: *mut hb_face_t,
+                                            table_tag: hb_tag_t,
+                                            feature_index:
+                                                ::std::os::raw::c_uint,
+                                            start_offset:
+                                                ::std::os::raw::c_uint,
+                                            lookup_count:
+                                                *mut ::std::os::raw::c_uint,
+                                            lookup_indexes:
+                                                *mut ::std::os::raw::c_uint)
+     -> ::std::os::raw::c_uint;
+}
+extern "C" {
+    pub fn hb_ot_layout_table_get_lookup_count(face: *mut hb_face_t,
+                                               table_tag: hb_tag_t)
+     -> ::std::os::raw::c_uint;
+}
+extern "C" {
+    pub fn hb_ot_layout_collect_lookups(face: *mut hb_face_t,
+                                        table_tag: hb_tag_t,
+                                        scripts: *const hb_tag_t,
+                                        languages: *const hb_tag_t,
+                                        features: *const hb_tag_t,
+                                        lookup_indexes: *mut hb_set_t);
+}
+extern "C" {
+    pub fn hb_ot_layout_lookup_collect_glyphs(face: *mut hb_face_t,
+                                              table_tag: hb_tag_t,
+                                              lookup_index:
+                                                  ::std::os::raw::c_uint,
+                                              glyphs_before: *mut hb_set_t,
+                                              glyphs_input: *mut hb_set_t,
+                                              glyphs_after: *mut hb_set_t,
+                                              glyphs_output: *mut hb_set_t);
+}
+extern "C" {
+    pub fn hb_ot_layout_table_find_feature_variations(face: *mut hb_face_t,
+                                                      table_tag: hb_tag_t,
+                                                      coords:
+                                                          *const ::std::os::raw::c_int,
+                                                      num_coords:
+                                                          ::std::os::raw::c_uint,
+                                                      variations_index:
+                                                          *mut ::std::os::raw::c_uint)
+     -> hb_bool_t;
+}
+extern "C" {
+    pub fn hb_ot_layout_feature_with_variations_get_lookups(face:
+                                                                *mut hb_face_t,
+                                                            table_tag:
+                                                                hb_tag_t,
+                                                            feature_index:
+                                                                ::std::os::raw::c_uint,
+                                                            variations_index:
+                                                                ::std::os::raw::c_uint,
+                                                            start_offset:
+                                                                ::std::os::raw::c_uint,
+                                                            lookup_count:
+                                                                *mut ::std::os::raw::c_uint,
+                                                            lookup_indexes:
+                                                                *mut ::std::os::raw::c_uint)
+     -> ::std::os::raw::c_uint;
+}
+extern "C" {
+    pub fn hb_ot_layout_has_substitution(face: *mut hb_face_t) -> hb_bool_t;
+}
+extern "C" {
+    pub fn hb_ot_layout_lookup_would_substitute(face: *mut hb_face_t,
+                                                lookup_index:
+                                                    ::std::os::raw::c_uint,
+                                                glyphs: *const hb_codepoint_t,
+                                                glyphs_length:
+                                                    ::std::os::raw::c_uint,
+                                                zero_context: hb_bool_t)
+     -> hb_bool_t;
+}
+extern "C" {
+    pub fn hb_ot_layout_lookup_substitute_closure(face: *mut hb_face_t,
+                                                  lookup_index:
+                                                      ::std::os::raw::c_uint,
+                                                  glyphs: *mut hb_set_t);
+}
+extern "C" {
+    pub fn hb_ot_layout_has_positioning(face: *mut hb_face_t) -> hb_bool_t;
+}
+extern "C" {
+    pub fn hb_ot_layout_get_size_params(face: *mut hb_face_t,
+                                        design_size:
+                                            *mut ::std::os::raw::c_uint,
+                                        subfamily_id:
+                                            *mut ::std::os::raw::c_uint,
+                                        subfamily_name_id:
+                                            *mut ::std::os::raw::c_uint,
+                                        range_start:
+                                            *mut ::std::os::raw::c_uint,
+                                        range_end:
+                                            *mut ::std::os::raw::c_uint)
+     -> hb_bool_t;
+}
+#[repr(u32)]
+/// hb_ot_math_constant_t:
+///
+/// Since: 1.3.3
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum hb_ot_math_constant_t {
+    HB_OT_MATH_CONSTANT_SCRIPT_PERCENT_SCALE_DOWN = 0,
+    HB_OT_MATH_CONSTANT_SCRIPT_SCRIPT_PERCENT_SCALE_DOWN = 1,
+    HB_OT_MATH_CONSTANT_DELIMITED_SUB_FORMULA_MIN_HEIGHT = 2,
+    HB_OT_MATH_CONSTANT_DISPLAY_OPERATOR_MIN_HEIGHT = 3,
+    HB_OT_MATH_CONSTANT_MATH_LEADING = 4,
+    HB_OT_MATH_CONSTANT_AXIS_HEIGHT = 5,
+    HB_OT_MATH_CONSTANT_ACCENT_BASE_HEIGHT = 6,
+    HB_OT_MATH_CONSTANT_FLATTENED_ACCENT_BASE_HEIGHT = 7,
+    HB_OT_MATH_CONSTANT_SUBSCRIPT_SHIFT_DOWN = 8,
+    HB_OT_MATH_CONSTANT_SUBSCRIPT_TOP_MAX = 9,
+    HB_OT_MATH_CONSTANT_SUBSCRIPT_BASELINE_DROP_MIN = 10,
+    HB_OT_MATH_CONSTANT_SUPERSCRIPT_SHIFT_UP = 11,
+    HB_OT_MATH_CONSTANT_SUPERSCRIPT_SHIFT_UP_CRAMPED = 12,
+    HB_OT_MATH_CONSTANT_SUPERSCRIPT_BOTTOM_MIN = 13,
+    HB_OT_MATH_CONSTANT_SUPERSCRIPT_BASELINE_DROP_MAX = 14,
+    HB_OT_MATH_CONSTANT_SUB_SUPERSCRIPT_GAP_MIN = 15,
+    HB_OT_MATH_CONSTANT_SUPERSCRIPT_BOTTOM_MAX_WITH_SUBSCRIPT = 16,
+    HB_OT_MATH_CONSTANT_SPACE_AFTER_SCRIPT = 17,
+    HB_OT_MATH_CONSTANT_UPPER_LIMIT_GAP_MIN = 18,
+    HB_OT_MATH_CONSTANT_UPPER_LIMIT_BASELINE_RISE_MIN = 19,
+    HB_OT_MATH_CONSTANT_LOWER_LIMIT_GAP_MIN = 20,
+    HB_OT_MATH_CONSTANT_LOWER_LIMIT_BASELINE_DROP_MIN = 21,
+    HB_OT_MATH_CONSTANT_STACK_TOP_SHIFT_UP = 22,
+    HB_OT_MATH_CONSTANT_STACK_TOP_DISPLAY_STYLE_SHIFT_UP = 23,
+    HB_OT_MATH_CONSTANT_STACK_BOTTOM_SHIFT_DOWN = 24,
+    HB_OT_MATH_CONSTANT_STACK_BOTTOM_DISPLAY_STYLE_SHIFT_DOWN = 25,
+    HB_OT_MATH_CONSTANT_STACK_GAP_MIN = 26,
+    HB_OT_MATH_CONSTANT_STACK_DISPLAY_STYLE_GAP_MIN = 27,
+    HB_OT_MATH_CONSTANT_STRETCH_STACK_TOP_SHIFT_UP = 28,
+    HB_OT_MATH_CONSTANT_STRETCH_STACK_BOTTOM_SHIFT_DOWN = 29,
+    HB_OT_MATH_CONSTANT_STRETCH_STACK_GAP_ABOVE_MIN = 30,
+    HB_OT_MATH_CONSTANT_STRETCH_STACK_GAP_BELOW_MIN = 31,
+    HB_OT_MATH_CONSTANT_FRACTION_NUMERATOR_SHIFT_UP = 32,
+    HB_OT_MATH_CONSTANT_FRACTION_NUMERATOR_DISPLAY_STYLE_SHIFT_UP = 33,
+    HB_OT_MATH_CONSTANT_FRACTION_DENOMINATOR_SHIFT_DOWN = 34,
+    HB_OT_MATH_CONSTANT_FRACTION_DENOMINATOR_DISPLAY_STYLE_SHIFT_DOWN = 35,
+    HB_OT_MATH_CONSTANT_FRACTION_NUMERATOR_GAP_MIN = 36,
+    HB_OT_MATH_CONSTANT_FRACTION_NUM_DISPLAY_STYLE_GAP_MIN = 37,
+    HB_OT_MATH_CONSTANT_FRACTION_RULE_THICKNESS = 38,
+    HB_OT_MATH_CONSTANT_FRACTION_DENOMINATOR_GAP_MIN = 39,
+    HB_OT_MATH_CONSTANT_FRACTION_DENOM_DISPLAY_STYLE_GAP_MIN = 40,
+    HB_OT_MATH_CONSTANT_SKEWED_FRACTION_HORIZONTAL_GAP = 41,
+    HB_OT_MATH_CONSTANT_SKEWED_FRACTION_VERTICAL_GAP = 42,
+    HB_OT_MATH_CONSTANT_OVERBAR_VERTICAL_GAP = 43,
+    HB_OT_MATH_CONSTANT_OVERBAR_RULE_THICKNESS = 44,
+    HB_OT_MATH_CONSTANT_OVERBAR_EXTRA_ASCENDER = 45,
+    HB_OT_MATH_CONSTANT_UNDERBAR_VERTICAL_GAP = 46,
+    HB_OT_MATH_CONSTANT_UNDERBAR_RULE_THICKNESS = 47,
+    HB_OT_MATH_CONSTANT_UNDERBAR_EXTRA_DESCENDER = 48,
+    HB_OT_MATH_CONSTANT_RADICAL_VERTICAL_GAP = 49,
+    HB_OT_MATH_CONSTANT_RADICAL_DISPLAY_STYLE_VERTICAL_GAP = 50,
+    HB_OT_MATH_CONSTANT_RADICAL_RULE_THICKNESS = 51,
+    HB_OT_MATH_CONSTANT_RADICAL_EXTRA_ASCENDER = 52,
+    HB_OT_MATH_CONSTANT_RADICAL_KERN_BEFORE_DEGREE = 53,
+    HB_OT_MATH_CONSTANT_RADICAL_KERN_AFTER_DEGREE = 54,
+    HB_OT_MATH_CONSTANT_RADICAL_DEGREE_BOTTOM_RAISE_PERCENT = 55,
+}
+#[repr(u32)]
+/// hb_ot_math_kern_t:
+///
+/// Since: 1.3.3
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum hb_ot_math_kern_t {
+    HB_OT_MATH_KERN_TOP_RIGHT = 0,
+    HB_OT_MATH_KERN_TOP_LEFT = 1,
+    HB_OT_MATH_KERN_BOTTOM_RIGHT = 2,
+    HB_OT_MATH_KERN_BOTTOM_LEFT = 3,
+}
+/// hb_ot_math_glyph_variant_t:
+///
+/// Since: 1.3.3
+#[repr(C)]
+#[derive(Debug, Copy)]
+pub struct hb_ot_math_glyph_variant_t {
+    pub glyph: hb_codepoint_t,
+    pub advance: hb_position_t,
+}
+#[test]
+fn bindgen_test_layout_hb_ot_math_glyph_variant_t() {
+    assert_eq!(::std::mem::size_of::<hb_ot_math_glyph_variant_t>() , 8usize ,
+               concat ! (
+               "Size of: " , stringify ! ( hb_ot_math_glyph_variant_t ) ));
+    assert_eq! (::std::mem::align_of::<hb_ot_math_glyph_variant_t>() , 4usize
+                , concat ! (
+                "Alignment of " , stringify ! ( hb_ot_math_glyph_variant_t )
+                ));
+    assert_eq! (unsafe {
+                & ( * ( 0 as * const hb_ot_math_glyph_variant_t ) ) . glyph as
+                * const _ as usize } , 0usize , concat ! (
+                "Alignment of field: " , stringify ! (
+                hb_ot_math_glyph_variant_t ) , "::" , stringify ! ( glyph )
+                ));
+    assert_eq! (unsafe {
+                & ( * ( 0 as * const hb_ot_math_glyph_variant_t ) ) . advance
+                as * const _ as usize } , 4usize , concat ! (
+                "Alignment of field: " , stringify ! (
+                hb_ot_math_glyph_variant_t ) , "::" , stringify ! ( advance )
+                ));
+}
+impl Clone for hb_ot_math_glyph_variant_t {
+    fn clone(&self) -> Self { *self }
+}
+#[repr(u32)]
+/// hb_ot_math_glyph_part_flags_t:
+///
+/// Since: 1.3.3
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum hb_ot_math_glyph_part_flags_t {
+    HB_MATH_GLYPH_PART_FLAG_EXTENDER = 1,
+}
+/// hb_ot_math_glyph_part_t:
+///
+/// Since: 1.3.3
+#[repr(C)]
+#[derive(Debug, Copy)]
+pub struct hb_ot_math_glyph_part_t {
+    pub glyph: hb_codepoint_t,
+    pub start_connector_length: hb_position_t,
+    pub end_connector_length: hb_position_t,
+    pub full_advance: hb_position_t,
+    pub flags: hb_ot_math_glyph_part_flags_t,
+}
+#[test]
+fn bindgen_test_layout_hb_ot_math_glyph_part_t() {
+    assert_eq!(::std::mem::size_of::<hb_ot_math_glyph_part_t>() , 20usize ,
+               concat ! (
+               "Size of: " , stringify ! ( hb_ot_math_glyph_part_t ) ));
+    assert_eq! (::std::mem::align_of::<hb_ot_math_glyph_part_t>() , 4usize ,
+                concat ! (
+                "Alignment of " , stringify ! ( hb_ot_math_glyph_part_t ) ));
+    assert_eq! (unsafe {
+                & ( * ( 0 as * const hb_ot_math_glyph_part_t ) ) . glyph as *
+                const _ as usize } , 0usize , concat ! (
+                "Alignment of field: " , stringify ! ( hb_ot_math_glyph_part_t
+                ) , "::" , stringify ! ( glyph ) ));
+    assert_eq! (unsafe {
+                & ( * ( 0 as * const hb_ot_math_glyph_part_t ) ) .
+                start_connector_length as * const _ as usize } , 4usize ,
+                concat ! (
+                "Alignment of field: " , stringify ! ( hb_ot_math_glyph_part_t
+                ) , "::" , stringify ! ( start_connector_length ) ));
+    assert_eq! (unsafe {
+                & ( * ( 0 as * const hb_ot_math_glyph_part_t ) ) .
+                end_connector_length as * const _ as usize } , 8usize , concat
+                ! (
+                "Alignment of field: " , stringify ! ( hb_ot_math_glyph_part_t
+                ) , "::" , stringify ! ( end_connector_length ) ));
+    assert_eq! (unsafe {
+                & ( * ( 0 as * const hb_ot_math_glyph_part_t ) ) .
+                full_advance as * const _ as usize } , 12usize , concat ! (
+                "Alignment of field: " , stringify ! ( hb_ot_math_glyph_part_t
+                ) , "::" , stringify ! ( full_advance ) ));
+    assert_eq! (unsafe {
+                & ( * ( 0 as * const hb_ot_math_glyph_part_t ) ) . flags as *
+                const _ as usize } , 16usize , concat ! (
+                "Alignment of field: " , stringify ! ( hb_ot_math_glyph_part_t
+                ) , "::" , stringify ! ( flags ) ));
+}
+impl Clone for hb_ot_math_glyph_part_t {
+    fn clone(&self) -> Self { *self }
+}
+extern "C" {
+    pub fn hb_ot_math_has_data(face: *mut hb_face_t) -> hb_bool_t;
+}
+extern "C" {
+    pub fn hb_ot_math_get_constant(font: *mut hb_font_t,
+                                   constant: hb_ot_math_constant_t)
+     -> hb_position_t;
+}
+extern "C" {
+    pub fn hb_ot_math_get_glyph_italics_correction(font: *mut hb_font_t,
+                                                   glyph: hb_codepoint_t)
+     -> hb_position_t;
+}
+extern "C" {
+    pub fn hb_ot_math_get_glyph_top_accent_attachment(font: *mut hb_font_t,
+                                                      glyph: hb_codepoint_t)
+     -> hb_position_t;
+}
+extern "C" {
+    pub fn hb_ot_math_is_glyph_extended_shape(face: *mut hb_face_t,
+                                              glyph: hb_codepoint_t)
+     -> hb_bool_t;
+}
+extern "C" {
+    pub fn hb_ot_math_get_glyph_kerning(font: *mut hb_font_t,
+                                        glyph: hb_codepoint_t,
+                                        kern: hb_ot_math_kern_t,
+                                        correction_height: hb_position_t)
+     -> hb_position_t;
+}
+extern "C" {
+    pub fn hb_ot_math_get_glyph_variants(font: *mut hb_font_t,
+                                         glyph: hb_codepoint_t,
+                                         direction: hb_direction_t,
+                                         start_offset: ::std::os::raw::c_uint,
+                                         variants_count:
+                                             *mut ::std::os::raw::c_uint,
+                                         variants:
+                                             *mut hb_ot_math_glyph_variant_t)
+     -> ::std::os::raw::c_uint;
+}
+extern "C" {
+    pub fn hb_ot_math_get_min_connector_overlap(font: *mut hb_font_t,
+                                                direction: hb_direction_t)
+     -> hb_position_t;
+}
+extern "C" {
+    pub fn hb_ot_math_get_glyph_assembly(font: *mut hb_font_t,
+                                         glyph: hb_codepoint_t,
+                                         direction: hb_direction_t,
+                                         start_offset: ::std::os::raw::c_uint,
+                                         parts_count:
+                                             *mut ::std::os::raw::c_uint,
+                                         parts: *mut hb_ot_math_glyph_part_t,
+                                         italics_correction:
+                                             *mut hb_position_t)
+     -> ::std::os::raw::c_uint;
+}
+extern "C" {
+    pub fn hb_ot_shape_glyphs_closure(font: *mut hb_font_t,
+                                      buffer: *mut hb_buffer_t,
+                                      features: *const hb_feature_t,
+                                      num_features: ::std::os::raw::c_uint,
+                                      glyphs: *mut hb_set_t);
+}
+extern "C" {
+    pub fn hb_ot_shape_plan_collect_lookups(shape_plan: *mut hb_shape_plan_t,
+                                            table_tag: hb_tag_t,
+                                            lookup_indexes: *mut hb_set_t);
+}
+/// hb_ot_var_axis_t:
+///
+/// Since: 1.4.2
+#[repr(C)]
+#[derive(Debug, Copy)]
+pub struct hb_ot_var_axis_t {
+    pub tag: hb_tag_t,
+    pub name_id: ::std::os::raw::c_uint,
+    pub min_value: f32,
+    pub default_value: f32,
+    pub max_value: f32,
+}
+#[test]
+fn bindgen_test_layout_hb_ot_var_axis_t() {
+    assert_eq!(::std::mem::size_of::<hb_ot_var_axis_t>() , 20usize , concat !
+               ( "Size of: " , stringify ! ( hb_ot_var_axis_t ) ));
+    assert_eq! (::std::mem::align_of::<hb_ot_var_axis_t>() , 4usize , concat !
+                ( "Alignment of " , stringify ! ( hb_ot_var_axis_t ) ));
+    assert_eq! (unsafe {
+                & ( * ( 0 as * const hb_ot_var_axis_t ) ) . tag as * const _
+                as usize } , 0usize , concat ! (
+                "Alignment of field: " , stringify ! ( hb_ot_var_axis_t ) ,
+                "::" , stringify ! ( tag ) ));
+    assert_eq! (unsafe {
+                & ( * ( 0 as * const hb_ot_var_axis_t ) ) . name_id as * const
+                _ as usize } , 4usize , concat ! (
+                "Alignment of field: " , stringify ! ( hb_ot_var_axis_t ) ,
+                "::" , stringify ! ( name_id ) ));
+    assert_eq! (unsafe {
+                & ( * ( 0 as * const hb_ot_var_axis_t ) ) . min_value as *
+                const _ as usize } , 8usize , concat ! (
+                "Alignment of field: " , stringify ! ( hb_ot_var_axis_t ) ,
+                "::" , stringify ! ( min_value ) ));
+    assert_eq! (unsafe {
+                & ( * ( 0 as * const hb_ot_var_axis_t ) ) . default_value as *
+                const _ as usize } , 12usize , concat ! (
+                "Alignment of field: " , stringify ! ( hb_ot_var_axis_t ) ,
+                "::" , stringify ! ( default_value ) ));
+    assert_eq! (unsafe {
+                & ( * ( 0 as * const hb_ot_var_axis_t ) ) . max_value as *
+                const _ as usize } , 16usize , concat ! (
+                "Alignment of field: " , stringify ! ( hb_ot_var_axis_t ) ,
+                "::" , stringify ! ( max_value ) ));
+}
+impl Clone for hb_ot_var_axis_t {
+    fn clone(&self) -> Self { *self }
+}
+extern "C" {
+    pub fn hb_ot_var_has_data(face: *mut hb_face_t) -> hb_bool_t;
+}
+extern "C" {
+    pub fn hb_ot_var_get_axis_count(face: *mut hb_face_t)
+     -> ::std::os::raw::c_uint;
+}
+extern "C" {
+    pub fn hb_ot_var_get_axes(face: *mut hb_face_t,
+                              start_offset: ::std::os::raw::c_uint,
+                              axes_count: *mut ::std::os::raw::c_uint,
+                              axes_array: *mut hb_ot_var_axis_t)
+     -> ::std::os::raw::c_uint;
+}
+extern "C" {
+    pub fn hb_ot_var_find_axis(face: *mut hb_face_t, axis_tag: hb_tag_t,
+                               axis_index: *mut ::std::os::raw::c_uint,
+                               axis_info: *mut hb_ot_var_axis_t) -> hb_bool_t;
+}
+extern "C" {
+    pub fn hb_ot_var_normalize_variations(face: *mut hb_face_t,
+                                          variations: *const hb_variation_t,
+                                          variations_length:
+                                              ::std::os::raw::c_uint,
+                                          coords: *mut ::std::os::raw::c_int,
+                                          coords_length:
+                                              ::std::os::raw::c_uint);
+}
+extern "C" {
+    pub fn hb_ot_var_normalize_coords(face: *mut hb_face_t,
+                                      coords_length: ::std::os::raw::c_uint,
+                                      design_coords: *const f32,
+                                      normalized_coords:
+                                          *mut ::std::os::raw::c_int);
 }
 pub type __builtin_va_list = [__va_list_tag; 1usize];
 #[repr(C)]
