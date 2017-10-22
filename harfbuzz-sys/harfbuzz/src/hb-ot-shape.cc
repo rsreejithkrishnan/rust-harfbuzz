@@ -275,8 +275,7 @@ hb_insert_dotted_circle (hb_buffer_t *buffer, hb_font_t *font)
 static void
 hb_form_clusters (hb_buffer_t *buffer)
 {
-  if (!(buffer->scratch_flags & HB_BUFFER_SCRATCH_FLAG_HAS_NON_ASCII) ||
-      buffer->cluster_level != HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES)
+  if (!(buffer->scratch_flags & HB_BUFFER_SCRATCH_FLAG_HAS_NON_ASCII))
     return;
 
   /* Loop duplicated in hb_ensure_native_direction(), and in _hb-coretext.cc */
@@ -288,11 +287,17 @@ hb_form_clusters (hb_buffer_t *buffer)
     if (likely (!HB_UNICODE_GENERAL_CATEGORY_IS_MARK (_hb_glyph_info_get_general_category (&info[i])) &&
 		!_hb_glyph_info_is_joiner (&info[i])))
     {
-      buffer->merge_clusters (base, i);
+      if (buffer->cluster_level == HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES)
+	buffer->merge_clusters (base, i);
+      else
+	buffer->unsafe_to_break (base, i);
       base = i;
     }
   }
-  buffer->merge_clusters (base, count);
+  if (buffer->cluster_level == HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES)
+    buffer->merge_clusters (base, count);
+  else
+    buffer->unsafe_to_break (base, count);
 }
 
 static void
@@ -393,6 +398,8 @@ hb_ot_shape_setup_masks_fraction (hb_ot_shape_context_t *c)
 	     _hb_glyph_info_get_general_category (&info[end]) ==
 	     HB_UNICODE_GENERAL_CATEGORY_DECIMAL_NUMBER)
         end++;
+
+      buffer->unsafe_to_break (start, end);
 
       for (unsigned int j = start; j < i; j++)
         info[j].mask |= pre_mask;
@@ -509,9 +516,10 @@ hb_ot_hide_default_ignorables (hb_ot_shape_context_t *c)
 	  /* Merge cluster backward. */
 	  if (cluster < info[j - 1].cluster)
 	  {
+	    unsigned int mask = info[i].mask;
 	    unsigned int old_cluster = info[j - 1].cluster;
 	    for (unsigned k = j; k && info[k - 1].cluster == old_cluster; k--)
-	      info[k - 1].cluster = cluster;
+	      buffer->set_cluster (info[k - 1], cluster, mask);
 	  }
 	  continue;
 	}
@@ -576,8 +584,6 @@ static inline void
 hb_ot_substitute_default (hb_ot_shape_context_t *c)
 {
   hb_buffer_t *buffer = c->buffer;
-
-  hb_ot_shape_initialize_masks (c);
 
   hb_ot_mirror_chars (c);
 
@@ -687,9 +693,9 @@ hb_ot_position_default (hb_ot_shape_context_t *c)
 static inline void
 hb_ot_position_complex (hb_ot_shape_context_t *c)
 {
-  hb_ot_layout_position_start (c->font, c->buffer);
-
   unsigned int count = c->buffer->len;
+  hb_glyph_info_t *info = c->buffer->info;
+  hb_glyph_position_t *pos = c->buffer->pos;
 
   /* If the font has no GPOS, AND, no fallback positioning will
    * happen, AND, direction is forward, then when zeroing mark
@@ -704,6 +710,17 @@ hb_ot_position_complex (hb_ot_shape_context_t *c)
 				     !c->plan->shaper->fallback_position &&
 				     HB_DIRECTION_IS_FORWARD (c->buffer->props.direction);
 
+  /* We change glyph origin to what GPOS expects (horizontal), apply GPOS, change it back. */
+
+  /* The nil glyph_h_origin() func returns 0, so no need to apply it. */
+  if (c->font->has_glyph_h_origin_func ())
+    for (unsigned int i = 0; i < count; i++)
+      c->font->add_glyph_h_origin (info[i].codepoint,
+				   &pos[i].x_offset,
+				   &pos[i].y_offset);
+
+  hb_ot_layout_position_start (c->font, c->buffer);
+
   switch (c->plan->shaper->zero_width_marks)
   {
     case HB_OT_SHAPE_ZERO_WIDTH_MARKS_BY_GDEF_EARLY:
@@ -717,29 +734,7 @@ hb_ot_position_complex (hb_ot_shape_context_t *c)
   }
 
   if (likely (!c->fallback_positioning))
-  {
-    hb_glyph_info_t *info = c->buffer->info;
-    hb_glyph_position_t *pos = c->buffer->pos;
-
-    /* Change glyph origin to what GPOS expects (horizontal), apply GPOS, change it back. */
-
-    /* The nil glyph_h_origin() func returns 0, so no need to apply it. */
-    if (c->font->has_glyph_h_origin_func ())
-      for (unsigned int i = 0; i < count; i++)
-	c->font->add_glyph_h_origin (info[i].codepoint,
-				     &pos[i].x_offset,
-				     &pos[i].y_offset);
-
     c->plan->position (c->font, c->buffer);
-
-    /* The nil glyph_h_origin() func returns 0, so no need to apply it. */
-    if (c->font->has_glyph_h_origin_func ())
-      for (unsigned int i = 0; i < count; i++)
-	c->font->subtract_glyph_h_origin (info[i].codepoint,
-					  &pos[i].x_offset,
-					  &pos[i].y_offset);
-
-  }
 
   switch (c->plan->shaper->zero_width_marks)
   {
@@ -757,6 +752,13 @@ hb_ot_position_complex (hb_ot_shape_context_t *c)
   hb_ot_layout_position_finish_advances (c->font, c->buffer);
   hb_ot_zero_width_default_ignorables (c);
   hb_ot_layout_position_finish_offsets (c->font, c->buffer);
+
+  /* The nil glyph_h_origin() func returns 0, so no need to apply it. */
+  if (c->font->has_glyph_h_origin_func ())
+    for (unsigned int i = 0; i < count; i++)
+      c->font->subtract_glyph_h_origin (info[i].codepoint,
+					&pos[i].x_offset,
+					&pos[i].y_offset);
 }
 
 static inline void
@@ -782,6 +784,31 @@ hb_ot_position (hb_ot_shape_context_t *c)
   _hb_buffer_deallocate_gsubgpos_vars (c->buffer);
 }
 
+static inline void
+hb_propagate_flags (hb_buffer_t *buffer)
+{
+  /* Propagate cluster-level glyph flags to be the same on all cluster glyphs.
+   * Simplifies using them. */
+
+  if (!(buffer->scratch_flags & HB_BUFFER_SCRATCH_FLAG_HAS_UNSAFE_TO_BREAK))
+    return;
+
+  hb_glyph_info_t *info = buffer->info;
+
+  foreach_cluster (buffer, start, end)
+  {
+    unsigned int mask = 0;
+    for (unsigned int i = start; i < end; i++)
+      if (info[i].mask & HB_GLYPH_FLAG_UNSAFE_TO_BREAK)
+      {
+	 mask = HB_GLYPH_FLAG_UNSAFE_TO_BREAK;
+	 break;
+      }
+    if (mask)
+      for (unsigned int i = start; i < end; i++)
+	info[i].mask |= mask;
+  }
+}
 
 /* Pull it all together! */
 
@@ -808,8 +835,10 @@ hb_ot_shape_internal (hb_ot_shape_context_t *c)
 
   c->buffer->clear_output ();
 
+  hb_ot_shape_initialize_masks (c);
   hb_set_unicode_props (c->buffer);
   hb_insert_dotted_circle (c->buffer, c->font);
+
   hb_form_clusters (c->buffer);
 
   hb_ensure_native_direction (c->buffer);
@@ -824,6 +853,8 @@ hb_ot_shape_internal (hb_ot_shape_context_t *c)
 
   if (c->plan->shaper->postprocess_glyphs)
     c->plan->shaper->postprocess_glyphs (c->plan, c->buffer, c->font);
+
+  hb_propagate_flags (c->buffer);
 
   _hb_buffer_deallocate_unicode_vars (c->buffer);
 

@@ -57,12 +57,9 @@ struct view_cairo_t
 		     hb_bool_t     utf8_clusters)
   {
   }
-  void shape_failed (hb_buffer_t  *buffer,
-		     const char   *text,
-		     unsigned int  text_len,
-		     hb_bool_t     utf8_clusters)
+  void error (const char *message)
   {
-    fail (false, "all shapers failed");
+    g_printerr ("%s: %s\n", g_get_prgname (), message);
   }
   void consume_glyphs (hb_buffer_t  *buffer,
 		       const char   *text,

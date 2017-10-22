@@ -197,8 +197,7 @@ _hb_ot_layout_destroy (hb_ot_layout_t *layout);
 #define syllable()		var1.u8[3] /* GSUB/GPOS shaping boundaries */
 
 
-/* loop over syllables */
-
+/* Loop over syllables. Based on foreach_cluster(). */
 #define foreach_syllable(buffer, start, end) \
   for (unsigned int \
        _count = buffer->len, \
@@ -347,6 +346,8 @@ _hb_glyph_info_get_modified_combining_class (const hb_glyph_info_t *info)
 {
   return _hb_glyph_info_is_unicode_mark (info) ? info->unicode_props()>>8 : 0;
 }
+
+#define info_cc(info) (_hb_glyph_info_get_modified_combining_class (&(info)))
 
 static inline bool
 _hb_glyph_info_is_unicode_space (const hb_glyph_info_t *info)

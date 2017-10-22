@@ -355,6 +355,7 @@ _hb_graphite2_shape (hb_shape_plan_t    *shape_plan,
       hb_glyph_info_t *info = &buffer->info[clusters[i].base_glyph + j];
       info->codepoint = gids[clusters[i].base_glyph + j];
       info->cluster = clusters[i].cluster;
+      info->mask = HB_GLYPH_FLAG_UNSAFE_TO_BREAK;
       info->var1.i32 = clusters[i].advance;     // all glyphs in the cluster get the same advance
     }
   }
@@ -365,7 +366,7 @@ _hb_graphite2_shape (hb_shape_plan_t    *shape_plan,
   float yscale = (float) font->y_scale / upem;
   yscale *= yscale / xscale;
   /* Positioning. */
-  int currclus = -1;
+  unsigned int currclus = (unsigned int) -1;
   const hb_glyph_info_t *info = buffer->info;
   hb_glyph_position_t *pPos = hb_buffer_get_glyph_positions (buffer, NULL);
   if (!HB_DIRECTION_IS_BACKWARD(buffer->props.direction))
@@ -388,7 +389,7 @@ _hb_graphite2_shape (hb_shape_plan_t    *shape_plan,
   }
   else
   {
-    curradvx = gr_seg_advance_X(seg);
+    curradvx = gr_seg_advance_X(seg) * xscale;
     for (is = gr_seg_first_slot (seg); is; pPos++, info++, is = gr_slot_next_in_segment (is))
     {
       if (info->cluster != currclus)

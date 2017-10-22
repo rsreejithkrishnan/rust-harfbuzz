@@ -160,7 +160,7 @@ hb_shape_plan_create2 (hb_face_t                     *face,
   assert (props->direction != HB_DIRECTION_INVALID);
 
   hb_face_make_immutable (face);
-  shape_plan->default_shaper_list = shaper_list == NULL;
+  shape_plan->default_shaper_list = !shaper_list;
   shape_plan->face_unsafe = face;
   shape_plan->props = *props;
   shape_plan->num_user_features = num_user_features;
@@ -423,7 +423,7 @@ hb_shape_plan_matches (const hb_shape_plan_t          *shape_plan,
   return hb_segment_properties_equal (&shape_plan->props, &proposal->props) &&
 	 hb_shape_plan_user_features_match (shape_plan, proposal) &&
 	 hb_shape_plan_coords_match (shape_plan, proposal) &&
-	 ((shape_plan->default_shaper_list && proposal->shaper_list == NULL) ||
+	 ((shape_plan->default_shaper_list && !proposal->shaper_list) ||
 	  (shape_plan->shaper_func == proposal->shaper_func));
 }
 
@@ -520,15 +520,17 @@ hb_shape_plan_create_cached2 (hb_face_t                     *face,
 
 retry:
   hb_face_t::plan_node_t *cached_plan_nodes = (hb_face_t::plan_node_t *) hb_atomic_ptr_get (&face->shape_plans);
-  for (hb_face_t::plan_node_t *node = cached_plan_nodes; node; node = node->next)
-    if (hb_shape_plan_matches (node->shape_plan, &proposal))
-    {
-      DEBUG_MSG_FUNC (SHAPE_PLAN, node->shape_plan, "fulfilled from cache");
-      return hb_shape_plan_reference (node->shape_plan);
-    }
+
+  /* Don't look for plan in the cache if there were variation coordinates XXX Fix me. */
+  if (!hb_coords_present (coords, num_coords))
+    for (hb_face_t::plan_node_t *node = cached_plan_nodes; node; node = node->next)
+      if (hb_shape_plan_matches (node->shape_plan, &proposal))
+      {
+        DEBUG_MSG_FUNC (SHAPE_PLAN, node->shape_plan, "fulfilled from cache");
+        return hb_shape_plan_reference (node->shape_plan);
+      }
 
   /* Not found. */
-
   hb_shape_plan_t *shape_plan = hb_shape_plan_create2 (face, props,
 						       user_features, num_user_features,
 						       coords, num_coords,

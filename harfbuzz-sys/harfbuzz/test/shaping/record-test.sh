@@ -43,9 +43,10 @@ if test $? != 0; then
 fi
 
 cp "$fontfile" "$dir/font.ttf"
-pyftsubset \
+fonttools subset \
 	--glyph-names \
 	--no-hinting \
+	--layout-features='*' \
 	"$dir/font.ttf" \
 	--text="$text"
 if ! test -s "$dir/font.subset.ttf"; then

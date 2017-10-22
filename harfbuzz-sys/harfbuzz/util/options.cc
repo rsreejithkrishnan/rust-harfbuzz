@@ -240,6 +240,8 @@ parse_features (const char *name G_GNUC_UNUSED,
   } while (p);
 
   shape_opts->features = (hb_feature_t *) calloc (shape_opts->num_features, sizeof (*shape_opts->features));
+  if (!shape_opts->features)
+    return false;
 
   /* now do the actual parsing */
   p = s;
@@ -281,6 +283,8 @@ parse_variations (const char *name G_GNUC_UNUSED,
   } while (p);
 
   font_opts->variations = (hb_variation_t *) calloc (font_opts->num_variations, sizeof (*font_opts->variations));
+  if (!font_opts->variations)
+    return false;
 
   /* now do the actual parsing */
   p = s;
@@ -292,6 +296,68 @@ parse_variations (const char *name G_GNUC_UNUSED,
     p = end ? end + 1 : NULL;
   }
 
+  return true;
+}
+
+static gboolean
+parse_text (const char *name G_GNUC_UNUSED,
+	    const char *arg,
+	    gpointer    data,
+	    GError    **error G_GNUC_UNUSED)
+{
+  text_options_t *text_opts = (text_options_t *) data;
+
+  if (text_opts->text)
+  {
+    g_set_error (error, G_OPTION_ERROR, G_OPTION_ERROR_BAD_VALUE,
+		 "Either --text or --unicodes can be provided but not both");
+    return false;
+  }
+
+  text_opts->text = g_strdup (arg);
+  return true;
+}
+
+
+static gboolean
+parse_unicodes (const char *name G_GNUC_UNUSED,
+	        const char *arg,
+	        gpointer    data,
+	        GError    **error G_GNUC_UNUSED)
+{
+  text_options_t *text_opts = (text_options_t *) data;
+
+  if (text_opts->text)
+  {
+    g_set_error (error, G_OPTION_ERROR, G_OPTION_ERROR_BAD_VALUE,
+		 "Either --text or --unicodes can be provided but not both");
+    return false;
+  }
+
+  GString *gs = g_string_new (NULL);
+  char *s = (char *) arg;
+  char *p;
+
+  while (s && *s)
+  {
+    while (*s && strchr ("<+>{},;&#\\xXuUnNiI\n\t", *s))
+      s++;
+
+    errno = 0;
+    hb_codepoint_t u = strtoul (s, &p, 16);
+    if (errno || s == p)
+    {
+      g_set_error (error, G_OPTION_ERROR, G_OPTION_ERROR_BAD_VALUE,
+		   "Failed parsing Unicode values at: '%s'", s);
+      return false;
+    }
+
+    g_string_append_unichar (gs, u);
+
+    s = p;
+  }
+
+  text_opts->text = g_string_free (gs, FALSE);
   return true;
 }
 
@@ -334,6 +400,7 @@ shape_options_t::add_options (option_parser_t *parser)
     {"utf8-clusters",	0, 0, G_OPTION_ARG_NONE,	&this->utf8_clusters,		"Use UTF8 byte indices, not char indices",	NULL},
     {"cluster-level",	0, 0, G_OPTION_ARG_INT,		&this->cluster_level,		"Cluster merging level (default: 0)",	"0/1/2"},
     {"normalize-glyphs",0, 0, G_OPTION_ARG_NONE,	&this->normalize_glyphs,	"Rearrange glyph clusters in nominal order",	NULL},
+    {"verify",		0, 0, G_OPTION_ARG_NONE,	&this->verify,			"Perform sanity checks on shaping results",	NULL},
     {"num-iterations",	0, 0, G_OPTION_ARG_INT,		&this->num_iterations,		"Run shaper N times (default: 1)",	"N"},
     {NULL}
   };
@@ -486,8 +553,9 @@ text_options_t::add_options (option_parser_t *parser)
 {
   GOptionEntry entries[] =
   {
-    {"text",		0, 0, G_OPTION_ARG_STRING,	&this->text,			"Set input text",			"string"},
+    {"text",		0, 0, G_OPTION_ARG_CALLBACK,	(gpointer) &parse_text,		"Set input text",			"string"},
     {"text-file",	0, 0, G_OPTION_ARG_STRING,	&this->text_file,		"Set input text file-name\n\n    If no text is provided, standard input is used for input.\n",		"filename"},
+    {"unicodes",      'u', 0, G_OPTION_ARG_CALLBACK,	(gpointer) &parse_unicodes,		"Set input Unicode codepoints",		"list of hex numbers"},
     {"text-before",	0, 0, G_OPTION_ARG_STRING,	&this->text_before,		"Set text context before each line",	"string"},
     {"text-after",	0, 0, G_OPTION_ARG_STRING,	&this->text_after,		"Set text context after each line",	"string"},
     {NULL}
@@ -516,8 +584,8 @@ output_options_t::add_options (option_parser_t *parser)
 
   GOptionEntry entries[] =
   {
-    {"output-file",	0, 0, G_OPTION_ARG_STRING,	&this->output_file,		"Set output file-name (default: stdout)","filename"},
-    {"output-format",	0, 0, G_OPTION_ARG_STRING,	&this->output_format,		text,					"format"},
+    {"output-file",   'o', 0, G_OPTION_ARG_STRING,	&this->output_file,		"Set output file-name (default: stdout)","filename"},
+    {"output-format", 'O', 0, G_OPTION_ARG_STRING,	&this->output_format,		text,					"format"},
     {NULL}
   };
   parser->add_group (entries,
@@ -768,7 +836,7 @@ format_options_t::add_options (option_parser_t *parser)
     {"show-text",	0, 0, G_OPTION_ARG_NONE,	&this->show_text,		"Prefix each line of output with its corresponding input text",		NULL},
     {"show-unicode",	0, 0, G_OPTION_ARG_NONE,	&this->show_unicode,		"Prefix each line of output with its corresponding input codepoint(s)",	NULL},
     {"show-line-num",	0, 0, G_OPTION_ARG_NONE,	&this->show_line_num,		"Prefix each line of output with its corresponding input line number",	NULL},
-    {"verbose",		0, G_OPTION_FLAG_NO_ARG,
+    {"verbose",	      'v', G_OPTION_FLAG_NO_ARG,
 			      G_OPTION_ARG_CALLBACK,	(gpointer) &parse_verbose,	"Prefix each line of output with all of the above",			NULL},
     {"no-glyph-names",	0, G_OPTION_FLAG_REVERSE,
 			      G_OPTION_ARG_NONE,	&this->show_glyph_names,	"Output glyph indices instead of names",				NULL},
@@ -777,7 +845,8 @@ format_options_t::add_options (option_parser_t *parser)
     {"no-clusters",	0, G_OPTION_FLAG_REVERSE,
 			      G_OPTION_ARG_NONE,	&this->show_clusters,		"Do not output cluster indices",					NULL},
     {"show-extents",	0, 0, G_OPTION_ARG_NONE,	&this->show_extents,		"Output glyph extents",							NULL},
-    {"trace",		0, 0, G_OPTION_ARG_NONE,	&this->trace,			"Output interim shaping results",					NULL},
+    {"show-flags",	0, 0, G_OPTION_ARG_NONE,	&this->show_flags,		"Output glyph flags",							NULL},
+    {"trace",	      'V', 0, G_OPTION_ARG_NONE,	&this->trace,			"Output interim shaping results",					NULL},
     {NULL}
   };
   parser->add_group (entries,
@@ -865,11 +934,12 @@ format_options_t::serialize_buffer_of_text (hb_buffer_t  *buffer,
 }
 void
 format_options_t::serialize_message (unsigned int  line_no,
+				     const char   *type,
 				     const char   *msg,
 				     GString      *gs)
 {
   serialize_line_no (line_no, gs);
-  g_string_append_printf (gs, "%s", msg);
+  g_string_append_printf (gs, "%s: %s", type, msg);
   g_string_append_c (gs, '\n');
 }
 void
